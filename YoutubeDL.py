@@ -114,214 +114,6 @@ if compat_os_name == 'nt':
 
 
 class YoutubeDL(object):
-    """YoutubeDL class.
-
-    YoutubeDL objects are the ones responsible of downloading the
-    actual video file and writing it to disk if the user has requested
-    it, among some other tasks. In most cases there should be one per
-    program. As, given a video URL, the downloader doesn't know how to
-    extract all the needed information, task that InfoExtractors do, it
-    has to pass the URL to one of them.
-
-    For this, YoutubeDL objects have a method that allows
-    InfoExtractors to be registered in a given order. When it is passed
-    a URL, the YoutubeDL object handles it to the first InfoExtractor it
-    finds that reports being able to handle it. The InfoExtractor extracts
-    all the information about the video or videos the URL refers to, and
-    YoutubeDL process the extracted information, possibly using a File
-    Downloader to download the video.
-
-    YoutubeDL objects accept a lot of parameters. In order not to saturate
-    the object constructor with arguments, it receives a dictionary of
-    options instead. These options are available through the params
-    attribute for the InfoExtractors to use. The YoutubeDL also
-    registers itself as the downloader in charge for the InfoExtractors
-    that are added to it, so this is a "mutual registration".
-
-    Available options:
-
-    username:          Username for authentication purposes.
-    password:          Password for authentication purposes.
-    videopassword:     Password for accessing a video.
-    ap_mso:            Adobe Pass multiple-system operator identifier.
-    ap_username:       Multiple-system operator account username.
-    ap_password:       Multiple-system operator account password.
-    usenetrc:          Use netrc for authentication instead.
-    verbose:           Print additional info to stdout.
-    quiet:             Do not print messages to stdout.
-    no_warnings:       Do not print out anything for warnings.
-    forceurl:          Force printing final URL.
-    forcetitle:        Force printing title.
-    forceid:           Force printing ID.
-    forcethumbnail:    Force printing thumbnail URL.
-    forcedescription:  Force printing description.
-    forcefilename:     Force printing final filename.
-    forceduration:     Force printing duration.
-    forcejson:         Force printing info_dict as JSON.
-    dump_single_json:  Force printing the info_dict of the whole playlist
-                       (or video) as a single JSON line.
-    simulate:          Do not download the video files.
-    format:            Video format code. See options.py for more information.
-    outtmpl:           Template for output names.
-    outtmpl_na_placeholder: Placeholder for unavailable meta fields.
-    restrictfilenames: Do not allow "&" and spaces in file names
-    ignoreerrors:      Do not stop on download errors.
-    force_generic_extractor: Force downloader to use the generic extractor
-    nooverwrites:      Prevent overwriting files.
-    playliststart:     Playlist item to start at.
-    playlistend:       Playlist item to end at.
-    playlist_items:    Specific indices of playlist to download.
-    playlistreverse:   Download playlist items in reverse order.
-    playlistrandom:    Download playlist items in random order.
-    matchtitle:        Download only matching titles.
-    rejecttitle:       Reject downloads for matching titles.
-    logger:            Log messages to a logging.Logger instance.
-    logtostderr:       Log messages to stderr instead of stdout.
-    writedescription:  Write the video description to a .description file
-    writeinfojson:     Write the video description to a .info.json file
-    writeannotations:  Write the video annotations to a .annotations.xml file
-    writethumbnail:    Write the thumbnail image to a file
-    write_all_thumbnails:  Write all thumbnail formats to files
-    writesubtitles:    Write the video subtitles to a file
-    writeautomaticsub: Write the automatically generated subtitles to a file
-    allsubtitles:      Downloads all the subtitles of the video
-                       (requires writesubtitles or writeautomaticsub)
-    listsubtitles:     Lists all available subtitles for the video
-    subtitlesformat:   The format code for subtitles
-    subtitleslangs:    List of languages of the subtitles to download
-    keepvideo:         Keep the video file after post-processing
-    daterange:         A DateRange object, download only if the upload_date is in the range.
-    skip_download:     Skip the actual download of the video file
-    cachedir:          Location of the cache files in the filesystem.
-                       False to disable filesystem cache.
-    noplaylist:        Download single video instead of a playlist if in doubt.
-    age_limit:         An integer representing the user's age in years.
-                       Unsuitable videos for the given age are skipped.
-    min_views:         An integer representing the minimum view count the video
-                       must have in order to not be skipped.
-                       Videos without view count information are always
-                       downloaded. None for no limit.
-    max_views:         An integer representing the maximum view count.
-                       Videos that are more popular than that are not
-                       downloaded.
-                       Videos without view count information are always
-                       downloaded. None for no limit.
-    download_archive:  File name of a file where all downloads are recorded.
-                       Videos already present in the file are not downloaded
-                       again.
-    cookiefile:        File name where cookies should be read from and dumped to.
-    nocheckcertificate:Do not verify SSL certificates
-    prefer_insecure:   Use HTTP instead of HTTPS to retrieve information.
-                       At the moment, this is only supported by YouTube.
-    proxy:             URL of the proxy server to use
-    geo_verification_proxy:  URL of the proxy to use for IP address verification
-                       on geo-restricted sites.
-    socket_timeout:    Time to wait for unresponsive hosts, in seconds
-    bidi_workaround:   Work around buggy terminals without bidirectional text
-                       support, using fridibi
-    debug_printtraffic:Print out sent and received HTTP traffic
-    include_ads:       Download ads as well
-    default_search:    Prepend this string if an input url is not valid.
-                       'auto' for elaborate guessing
-    encoding:          Use this encoding instead of the system-specified.
-    extract_flat:      Do not resolve URLs, return the immediate result.
-                       Pass in 'in_playlist' to only show this behavior for
-                       playlist items.
-    postprocessors:    A list of dictionaries, each with an entry
-                       * key:  The name of the postprocessor. See
-                               youtube_dl/postprocessor/__init__.py for a list.
-                       as well as any further keyword arguments for the
-                       postprocessor.
-    progress_hooks:    A list of functions that get called on download
-                       progress, with a dictionary with the entries
-                       * status: One of "downloading", "error", or "finished".
-                                 Check this first and ignore unknown values.
-
-                       If status is one of "downloading", or "finished", the
-                       following properties may also be present:
-                       * filename: The final filename (always present)
-                       * tmpfilename: The filename we're currently writing to
-                       * downloaded_bytes: Bytes on disk
-                       * total_bytes: Size of the whole file, None if unknown
-                       * total_bytes_estimate: Guess of the eventual file size,
-                                               None if unavailable.
-                       * elapsed: The number of seconds since download started.
-                       * eta: The estimated time in seconds, None if unknown
-                       * speed: The download speed in bytes/second, None if
-                                unknown
-                       * fragment_index: The counter of the currently
-                                         downloaded video fragment.
-                       * fragment_count: The number of fragments (= individual
-                                         files that will be merged)
-
-                       Progress hooks are guaranteed to be called at least once
-                       (with status "finished") if the download is successful.
-    merge_output_format: Extension to use when merging formats.
-    fixup:             Automatically correct known faults of the file.
-                       One of:
-                       - "never": do nothing
-                       - "warn": only emit a warning
-                       - "detect_or_warn": check whether we can do anything
-                                           about it, warn otherwise (default)
-    source_address:    Client-side IP address to bind to.
-    call_home:         Boolean, true iff we are allowed to contact the
-                       youtube-dl servers for debugging.
-    sleep_interval:    Number of seconds to sleep before each download when
-                       used alone or a lower bound of a range for randomized
-                       sleep before each download (minimum possible number
-                       of seconds to sleep) when used along with
-                       max_sleep_interval.
-    max_sleep_interval:Upper bound of a range for randomized sleep before each
-                       download (maximum possible number of seconds to sleep).
-                       Must only be used along with sleep_interval.
-                       Actual sleep time will be a random float from range
-                       [sleep_interval; max_sleep_interval].
-    listformats:       Print an overview of available video formats and exit.
-    list_thumbnails:   Print a table of all thumbnails and exit.
-    match_filter:      A function that gets called with the info_dict of
-                       every video.
-                       If it returns a message, the video is ignored.
-                       If it returns None, the video is downloaded.
-                       match_filter_func in utils.py is one example for this.
-    no_color:          Do not emit color codes in output.
-    geo_bypass:        Bypass geographic restriction via faking X-Forwarded-For
-                       HTTP header
-    geo_bypass_country:
-                       Two-letter ISO 3166-2 country code that will be used for
-                       explicit geographic restriction bypassing via faking
-                       X-Forwarded-For HTTP header
-    geo_bypass_ip_block:
-                       IP range in CIDR notation that will be used similarly to
-                       geo_bypass_country
-
-    The following options determine which downloader is picked:
-    external_downloader: Executable of the external downloader to call.
-                       None or unset for standard (built-in) downloader.
-    hls_prefer_native: Use the native HLS downloader instead of ffmpeg/avconv
-                       if True, otherwise use ffmpeg/avconv if False, otherwise
-                       use downloader suggested by extractor if None.
-
-    The following parameters are not used by YoutubeDL itself, they are used by
-    the downloader (see youtube_dl/downloader/common.py):
-    nopart, updatetime, buffersize, ratelimit, min_filesize, max_filesize, test,
-    noresizebuffer, retries, continuedl, noprogress, consoletitle,
-    xattr_set_filesize, external_downloader_args, hls_use_mpegts,
-    http_chunk_size.
-
-    The following options are used by the post processors:
-    prefer_ffmpeg:     If False, use avconv instead of ffmpeg if both are available,
-                       otherwise prefer ffmpeg.
-    ffmpeg_location:   Location of the ffmpeg/avconv binary; either the path
-                       to the binary or its containing directory.
-    postprocessor_args: A list of additional command-line arguments for the
-                        postprocessor.
-
-    The following options are used by the Youtube extractor:
-    youtube_include_dash_manifest: If True (default), DASH manifests and related
-                        data will be downloaded and processed by extractor.
-                        You can reduce network I/O by disabling it if you don't
-                        care about DASH.
-    """
 
     _NUMERIC_FIELDS = set((
         'width', 'height', 'tbr', 'abr', 'asr', 'vbr', 'fps', 'filesize', 'filesize_approx',
@@ -534,8 +326,6 @@ class YoutubeDL(object):
             return
         if compat_os_name == 'nt':
             if ctypes.windll.kernel32.GetConsoleWindow():
-                # c_wchar_p() might not be necessary if `message` is
-                # already of type unicode()
                 ctypes.windll.kernel32.SetConsoleTitleW(ctypes.c_wchar_p(message))
         elif 'TERM' in os.environ:
             self._write_string('\033]0;%s\007' % message, self._screen_file)
@@ -569,19 +359,11 @@ class YoutubeDL(object):
             self.cookiejar.save(ignore_discard=True, ignore_expires=True)
 
     def trouble(self, message=None, tb=None):
-        """Determine action to take when a download problem appears.
-
-        Depending on if the downloader has been configured to ignore
-        download errors or not, this method may throw an exception or
-        not when errors are found, after printing the message.
-
-        tb, if given, is additional traceback information.
-        """
         if message is not None:
             self.to_stderr(message)
         if self.params.get('verbose'):
             if tb is None:
-                if sys.exc_info()[0]:  # if .trouble has been called from an except block
+                if sys.exc_info()[0]:
                     tb = ''
                     if hasattr(sys.exc_info()[1], 'exc_info') and sys.exc_info()[1].exc_info[0]:
                         tb += ''.join(traceback.format_exception(*sys.exc_info()[1].exc_info))
@@ -599,10 +381,6 @@ class YoutubeDL(object):
         self._download_retcode = 1
 
     def report_warning(self, message):
-        '''
-        Print the message to stderr, it will be prefixed with 'WARNING:'
-        If stderr is a tty file the 'WARNING:' will be colored
-        '''
         if self.params.get('logger') is not None:
             self.params['logger'].warning(message)
         else:
@@ -616,10 +394,6 @@ class YoutubeDL(object):
             self.to_stderr(warning_message)
 
     def report_error(self, message, tb=None):
-        '''
-        Do the same as trouble, but prefixes the message with 'ERROR:', colored
-        in red if stderr is a tty file.
-        '''
         if not self.params.get('no_color') and self._err_file.isatty() and compat_os_name != 'nt':
             _msg_header = '\033[0;31mERROR:\033[0m'
         else:
@@ -628,7 +402,6 @@ class YoutubeDL(object):
         self.trouble(error_message, tb)
 
     def report_file_already_downloaded(self, file_name):
-        """Report file has already been fully downloaded."""
         try:
             self.to_screen('[download] %s has already been downloaded' % file_name)
         except UnicodeEncodeError:
@@ -662,9 +435,6 @@ class YoutubeDL(object):
             template_dict = collections.defaultdict(lambda: self.params.get('outtmpl_na_placeholder', 'NA'), template_dict)
 
             outtmpl = self.params.get('outtmpl', DEFAULT_OUTTMPL)
-
-            # For fields playlist_index and autonumber convert all occurrences
-            # of %(field)s to %(field)0Nd for backward compatibility
             field_size_compat_map = {
                 'playlist_index': len(str(template_dict['n_entries'])),
                 'autonumber': autonumber_size,
@@ -676,16 +446,8 @@ class YoutubeDL(object):
                     FIELD_SIZE_COMPAT_RE,
                     r'%%(\1)0%dd' % field_size_compat_map[mobj.group('field')],
                     outtmpl)
-
-            # Missing numeric fields used together with integer presentation types
-            # in format specification will break the argument substitution since
-            # string NA placeholder is returned for missing fields. We will patch
-            # output template for missing fields to meet string presentation type.
             for numeric_field in self._NUMERIC_FIELDS:
                 if numeric_field not in template_dict:
-                    # As of [1] format syntax is:
-                    #  %[mapping_key][conversion_flags][minimum_width][.precision][length_modifier]type
-                    # 1. https://docs.python.org/2/library/stdtypes.html#string-formatting
                     FORMAT_RE = r'''(?x)
                         (?<!%)
                         %
@@ -699,23 +461,9 @@ class YoutubeDL(object):
                     outtmpl = re.sub(
                         FORMAT_RE.format(numeric_field),
                         r'%({0})s'.format(numeric_field), outtmpl)
-
-            # expand_path translates '%%' into '%' and '$$' into '$'
-            # correspondingly that is not what we want since we need to keep
-            # '%%' intact for template dict substitution step. Working around
-            # with boundary-alike separator hack.
             sep = ''.join([random.choice(ascii_letters) for _ in range(32)])
             outtmpl = outtmpl.replace('%%', '%{0}%'.format(sep)).replace('$$', '${0}$'.format(sep))
-
-            # outtmpl should be expand_path'ed before template dict substitution
-            # because meta fields may contain env variables we don't want to
-            # be expanded. For example, for outtmpl "%(title)s.%(ext)s" and
-            # title "Hello $PATH", we don't want `$PATH` to be expanded.
             filename = expand_path(outtmpl).replace(sep, '') % template_dict
-
-            # Temporary fix for #4787
-            # 'Treat' all problem characters by passing filename through preferredencoding
-            # to workaround encoding issues with subprocess on python2 @ Windows
             if sys.version_info < (3, 0) and sys.platform == 'win32':
                 filename = encodeFilename(filename, True).decode(preferredencoding())
             return sanitize_path(filename)
@@ -773,20 +521,6 @@ class YoutubeDL(object):
 
     def extract_info(self, url, download=True, ie_key=None, extra_info={},
                      process=True, force_generic_extractor=False):
-        """
-        Return a list with a dictionary for each video extracted.
-
-        Arguments:
-        url -- URL to extract
-
-        Keyword arguments:
-        download -- whether to download videos during extraction
-        ie_key -- extractor key hint
-        extra_info -- dictionary containing the extra values to add to each result
-        process -- whether to resolve all unresolved references (URLs, playlist items),
-            must be True for download to work.
-        force_generic_extractor -- force using the generic extractor
-        """
 
         if not ie_key and force_generic_extractor:
             ie_key = 'Generic'
@@ -892,8 +626,6 @@ class YoutubeDL(object):
                 ie_result['url'], ie_key=ie_result.get('ie_key'),
                 extra_info=extra_info, download=False, process=False)
 
-            # extract_info may return None when ignoreerrors is enabled and
-            # extraction failed with an error, don't crash and return early
             # in this case
             if not info:
                 return info
@@ -906,20 +638,13 @@ class YoutubeDL(object):
             new_result = info.copy()
             new_result.update(force_properties)
 
-            # Extracted info may not be a video result (i.e.
-            # info.get('_type', 'video') != video) but rather an url or
-            # url_transparent. In such cases outer metadata (from ie_result)
-            # should be propagated to inner one (info). For this to happen
-            # _type of info should be overridden with url_transparent. This
-            # fixes issue from https://github.com/ytdl-org/youtube-dl/pull/11163.
             if new_result.get('_type') == 'url':
                 new_result['_type'] = 'url_transparent'
 
             return self.process_ie_result(
                 new_result, download=download, extra_info=extra_info)
         elif result_type in ('playlist', 'multi_video'):
-            # Protect from infinite recursion due to recursively nested playlists
-            # (see https://github.com/ytdl-org/youtube-dl/issues/27833)
+ 
             webpage_url = ie_result['webpage_url']
             if webpage_url in self._playlist_urls:
                 self.to_screen(
@@ -1310,9 +1035,6 @@ class YoutubeDL(object):
                             if f.get('vcodec') != 'none' and f.get('acodec') != 'none']
                         if audiovideo_formats:
                             yield audiovideo_formats[format_idx]
-                        # for extractors with incomplete formats (audio only (soundcloud)
-                        # or video only (imgur)) we will fallback to best/worst
-                        # {video,audio}-only format
                         elif ctx['incomplete_formats']:
                             yield formats[format_idx]
                     elif format_spec == 'bestaudio':
@@ -1651,22 +1373,6 @@ class YoutubeDL(object):
                 self._write_string('[debug] Default format spec: %s\n' % req_format)
 
         format_selector = self.build_format_selector(req_format)
-
-        # While in format selection we may need to have an access to the original
-        # format set in order to calculate some metrics or do some processing.
-        # For now we need to be able to guess whether original formats provided
-        # by extractor are incomplete or not (i.e. whether extractor provides only
-        # video-only or audio-only formats) for proper formats selection for
-        # extractors with such incomplete formats (see
-        # https://github.com/ytdl-org/youtube-dl/pull/5556).
-        # Since formats may be filtered during format selection and may not match
-        # the original formats the results may be incorrect. Thus original formats
-        # or pre-calculated metrics should be passed to format selection routines
-        # as well.
-        # We will pass a context object containing all necessary additional data
-        # instead of just formats.
-        # This fixes incorrect format selection issue (see
-        # https://github.com/ytdl-org/youtube-dl/issues/10083).
         incomplete_formats = (
             # All formats are video-only or
             all(f.get('vcodec') != 'none' and f.get('acodec') == 'none' for f in formats)
@@ -2396,11 +2102,6 @@ class YoutubeDL(object):
         ydlh = YoutubeDLHandler(self.params, debuglevel=debuglevel)
         redirect_handler = YoutubeDLRedirectHandler()
         data_handler = compat_urllib_request_DataHandler()
-
-        # When passing our own FileHandler instance, build_opener won't add the
-        # default FileHandler and allows us to disable the file protocol, which
-        # can be used for malicious purposes (see
-        # https://github.com/ytdl-org/youtube-dl/issues/8227)
         file_handler = compat_urllib_request.FileHandler()
 
         def file_open(*args, **kwargs):
@@ -2409,10 +2110,6 @@ class YoutubeDL(object):
 
         opener = compat_urllib_request.build_opener(
             proxy_handler, https_handler, cookie_processor, ydlh, redirect_handler, data_handler, file_handler)
-
-        # Delete the default user-agent header, which would otherwise apply in
-        # cases where our custom HTTP handler doesn't come into play
-        # (See https://github.com/ytdl-org/youtube-dl/issues/1309 for details)
         opener.addheaders = []
         self._opener = opener
 
